@@ -1,70 +1,34 @@
 #include "oops.h"
 
-/* Structs */
-
-typedef struct {
-    const char *name;
-    size_t fields_count;
-    Janet *fields;
-} oops_type_t;
-
-typedef struct {
-    oops_type_t *type;
-    Janet *fields;
-} oops_value_t;
-
-/* Utility Functions */
-
-static void oops_register_abstract_type(const char *type_name) {
-    /* Don't free this because janet_get_abstract_type() needs it */
-    JanetAbstractType *at = malloc(sizeof(JanetAbstractType));
-
-    *at = (JanetAbstractType){
-        type_name,
-        JANET_ATEND_NAME
-    };
-
-    janet_register_abstract_type(at);
-}
-
-static oops_value_t *oops_value(oops_type_t *type) {
-    const JanetAbstractType *at = janet_get_abstract_type(janet_csymbolv(type->name));
-    if (at == NULL)
-        janet_panicf("no abstract type in registry with name %s", type->name);
-    oops_value_t *value = (oops_value_t *)janet_abstract(at, sizeof(oops_value_t));
-    return value;
-}
-
-/* Type Definition */
-
-static const JanetAbstractType oops_type_type = {
-    "oops/type",
-    JANET_ATEND_NAME
-};
-
-/* Functions */
+/* C Functions */
 
 static Janet cfun_oops_emit_type(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 1);
+    janet_fixarity(argc, 2);
 
     const char *name = janet_getcstring(argv, 0);
-    oops_register_abstract_type(name);
+    const Janet *field_names = janet_gettuple(argv, 1);
 
+    oops_value_register_type(name);
     oops_type_t *type = (oops_type_t *)janet_abstract(&oops_type_type, sizeof(oops_type_t));
     type->name = name;
-    type->fields_count = 0;
+    type->field_count = janet_tuple_length(field_names);
+    type->field_names = (Janet *)field_names;
 
     return janet_wrap_abstract(type);
 }
 
 static Janet cfun_oops_emit_instance(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 1);
+    janet_fixarity(argc, 2);
 
     oops_type_t *type = (oops_type_t *)janet_getabstract(argv, 0, &oops_type_type);
-    oops_value_t *value = oops_value(type);
+    const Janet *fields = janet_gettuple(argv, 1);
 
+    if ((size_t)janet_tuple_length(fields) != type->field_count)
+        janet_panicf("incorrect number of fields in constructor");
+
+    oops_value_t *value = oops_value(type);
     value->type = type;
-    value->fields = NULL;
+    value->fields = (Janet *)fields;
 
     return janet_wrap_abstract(value);
 }
@@ -77,9 +41,9 @@ static const JanetReg cfuns[] = {
 
 /* Environment Registration */
 
-void oops_register_type(JanetTable *env) {
+void oops_register_types(JanetTable *env) {
     (void) env;
-    janet_register_abstract_type(&oops_type_type);
+    oops_type_register_type();
 }
 
 void oops_register_functions(JanetTable *env) {
@@ -87,5 +51,6 @@ void oops_register_functions(JanetTable *env) {
 }
 
 JANET_MODULE_ENTRY(JanetTable *env) {
+    oops_register_types(env);
     oops_register_functions(env);
 }
