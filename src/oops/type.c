@@ -3,9 +3,8 @@
 /* Deinitialising */
 
 static int oops_type_gc(void *p, size_t size) {
+    (void) p;
     (void) size;
-    oops_type_t *type = (oops_type_t *)p;
-    free((char *)type->name);
     return 0;
 }
 
