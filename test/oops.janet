@@ -4,8 +4,8 @@
 
 (print (type T))
 
-(def val (oops/emit-instance T ["eggs"]))
+(def val (oops/emit-instance T [["eggs"]]))
 
 (print (type val))
 
-(print (val :items))
+(pp (val :items))
