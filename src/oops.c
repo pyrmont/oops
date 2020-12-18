@@ -8,7 +8,7 @@ static Janet cfun_oops_emit_type(int32_t argc, Janet *argv) {
     const char *name = janet_getcstring(argv, 0);
     const Janet *field_names = janet_gettuple(argv, 1);
 
-    oops_value_register_type(name);
+    oops_instance_register_type(name);
     oops_type_t *type = (oops_type_t *)janet_abstract(&oops_type_type, sizeof(oops_type_t));
     type->name = name;
     type->field_count = janet_tuple_length(field_names);
@@ -18,24 +18,46 @@ static Janet cfun_oops_emit_type(int32_t argc, Janet *argv) {
 }
 
 static Janet cfun_oops_emit_instance(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 2);
+    janet_arity(argc, 2, 3);
 
     oops_type_t *type = (oops_type_t *)janet_getabstract(argv, 0, &oops_type_type);
-    const Janet *fields = janet_gettuple(argv, 1);
 
-    if ((size_t)janet_tuple_length(fields) != type->field_count)
+    JanetView fields = janet_getindexed(argv, 1);
+
+    JanetDictView methods = {NULL, 0, 0};
+    if (argc == 3) {
+        methods = janet_getdictionary(argv, 2);
+    }
+
+    if ((size_t)fields.len != type->field_count)
         janet_panicf("incorrect number of fields in constructor");
 
-    oops_value_t *value = oops_value(type);
-    value->type = type;
-    value->fields = (Janet *)fields;
+    if ((size_t)methods.len > OOPS_ABSTRACT_METHODS)
+        janet_panicf("too many methods in constructor");
 
-    return janet_wrap_abstract(value);
+    oops_instance_t *instance = oops_instance(type, fields, methods);
+
+    return janet_wrap_abstract(instance);
+}
+
+static Janet cfun_oops_emit_protocol(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+
+    const char *name = janet_getcstring(argv, 0);
+    const Janet *function_details = janet_gettuple(argv, 1);
+
+    oops_protocol_t *protocol = (oops_protocol_t *)janet_abstract(&oops_protocol_type, sizeof(oops_protocol_t));
+    protocol->name = name;
+    protocol->function_count = janet_tuple_length(function_details);
+    protocol->function_details = (Janet *)function_details;
+
+    return janet_wrap_abstract(protocol);
 }
 
 static const JanetReg cfuns[] = {
     {"emit-type", cfun_oops_emit_type, NULL},
     {"emit-instance", cfun_oops_emit_instance, NULL},
+    {"emit-protocol", cfun_oops_emit_protocol, NULL},
     {NULL, NULL, NULL}
 };
 
@@ -44,6 +66,7 @@ static const JanetReg cfuns[] = {
 void oops_register_types(JanetTable *env) {
     (void) env;
     oops_type_register_type();
+    oops_protocol_register_type();
 }
 
 void oops_register_functions(JanetTable *env) {

@@ -21,6 +21,7 @@
   :cflags cflags
   :lflags lflags
   :headers ["src/oops.h"]
-  :source ["src/oops/type.c"
-           "src/oops/value.c"
+  :source ["src/oops/instance.c"
+           "src/oops/protocol.c"
+           "src/oops/type.c"
            "src/oops.c"])
