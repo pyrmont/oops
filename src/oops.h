@@ -14,8 +14,10 @@ typedef struct {
     const char *name;
     size_t field_count;
     Janet *field_names;
+    Janet methods[OOPS_ABSTRACT_METHODS];
 } oops_type_t;
 
+oops_type_t *oops_type(const char *name, const Janet *fields, JanetDictView methods);
 void oops_type_register_type();
 
 /* Oops Instance Type */
@@ -23,10 +25,9 @@ void oops_type_register_type();
 typedef struct {
     oops_type_t *type;
     Janet *fields;
-    Janet methods[OOPS_ABSTRACT_METHODS];
 } oops_instance_t;
 
-oops_instance_t *oops_instance(oops_type_t *type, JanetView fields, JanetDictView methods);
+oops_instance_t *oops_instance(oops_type_t *type, JanetView fields);
 void oops_instance_register_type(const char *type_name);
 
 /* Oops Protocol Type */

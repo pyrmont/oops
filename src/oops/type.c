@@ -8,6 +8,24 @@ static int oops_type_gc(void *p, size_t size) {
     return 0;
 }
 
+/* Initialising */
+
+oops_type_t *oops_type(const char *name, const Janet *fields, JanetDictView methods) {
+    oops_type_t *type = (oops_type_t *)janet_abstract(&oops_type_type, sizeof(oops_type_t));
+    type->name = name;
+    type->field_count = janet_tuple_length(fields);
+    type->field_names = (Janet *)fields;
+
+    Janet method;
+
+    method = janet_dictionary_get(methods.kvs, methods.cap, janet_ckeywordv("tostring"));
+    if (janet_checktype(method, JANET_FUNCTION)) {
+        type->methods[OOPS_ABSTRACT_TOSTRING] = method;
+    }
+
+    return type;
+}
+
 /* Marking */
 
 static int oops_type_mark(void *p, size_t size) {

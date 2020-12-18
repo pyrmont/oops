@@ -3,39 +3,36 @@
 /* C Functions */
 
 static Janet cfun_oops_emit_type(int32_t argc, Janet *argv) {
-    janet_fixarity(argc, 2);
-
-    const char *name = janet_getcstring(argv, 0);
-    const Janet *field_names = janet_gettuple(argv, 1);
-
-    oops_instance_register_type(name);
-    oops_type_t *type = (oops_type_t *)janet_abstract(&oops_type_type, sizeof(oops_type_t));
-    type->name = name;
-    type->field_count = janet_tuple_length(field_names);
-    type->field_names = (Janet *)field_names;
-
-    return janet_wrap_abstract(type);
-}
-
-static Janet cfun_oops_emit_instance(int32_t argc, Janet *argv) {
     janet_arity(argc, 2, 3);
 
-    oops_type_t *type = (oops_type_t *)janet_getabstract(argv, 0, &oops_type_type);
-
-    JanetView fields = janet_getindexed(argv, 1);
+    const char *name = janet_getcstring(argv, 0);
+    const Janet *fields = janet_gettuple(argv, 1);
 
     JanetDictView methods = {NULL, 0, 0};
     if (argc == 3) {
         methods = janet_getdictionary(argv, 2);
     }
 
+    if ((size_t)methods.len > OOPS_ABSTRACT_METHODS)
+        janet_panicf("too many methods in definition");
+
+    oops_type_t *type = oops_type(name, fields, methods);
+    oops_instance_register_type(name);
+
+    return janet_wrap_abstract(type);
+}
+
+static Janet cfun_oops_emit_instance(int32_t argc, Janet *argv) {
+    janet_fixarity(argc, 2);
+
+    oops_type_t *type = (oops_type_t *)janet_getabstract(argv, 0, &oops_type_type);
+
+    JanetView fields = janet_getindexed(argv, 1);
+
     if ((size_t)fields.len != type->field_count)
         janet_panicf("incorrect number of fields in constructor");
 
-    if ((size_t)methods.len > OOPS_ABSTRACT_METHODS)
-        janet_panicf("too many methods in constructor");
-
-    oops_instance_t *instance = oops_instance(type, fields, methods);
+    oops_instance_t *instance = oops_instance(type, fields);
 
     return janet_wrap_abstract(instance);
 }

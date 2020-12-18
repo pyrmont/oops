@@ -1,11 +1,13 @@
 (import ../build/oops)
 
-(def T (oops/emit-type "shopping-list" [:items]))
+(def T (oops/emit-type
+         "shopping-list"
+         [:items]
+         {:tostring (fn [] "hello world")}))
 
 (print (type T))
 
-(def val (oops/emit-instance T [["eggs"]]
-           {:tostring (fn [] "hello world")}))
+(def val (oops/emit-instance T [["eggs"]]))
 
 (print (type val))
 (print val)

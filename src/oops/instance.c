@@ -10,7 +10,7 @@ static int oops_instance_gc(void *p, size_t size) {
 
 /* Initialising  */
 
-oops_instance_t *oops_instance(oops_type_t *type, JanetView fields, JanetDictView methods) {
+oops_instance_t *oops_instance(oops_type_t *type, JanetView fields) {
     const JanetAbstractType *at = janet_get_abstract_type(janet_csymbolv(type->name));
     if (at == NULL)
         janet_panicf("no abstract type in registry with name %s", type->name);
@@ -23,12 +23,6 @@ oops_instance_t *oops_instance(oops_type_t *type, JanetView fields, JanetDictVie
         instance->fields[i] = fields.items[i];
     }
 
-    Janet method;
-
-    method = janet_dictionary_get(methods.kvs, methods.cap, janet_ckeywordv("tostring"));
-    if (janet_checktype(method, JANET_FUNCTION)) {
-        instance->methods[OOPS_ABSTRACT_TOSTRING] = method;
-    }
     return instance;
 }
 
@@ -95,8 +89,8 @@ static void oops_instance_put(void *p, Janet key, Janet value) {
 static void oops_instance_tostring(void *p, JanetBuffer *buf) {
     oops_instance_t *instance = (oops_instance_t *)p;
 
-    if (janet_checktype(instance->methods[OOPS_ABSTRACT_TOSTRING], JANET_FUNCTION)) {
-        JanetFunction *method = janet_unwrap_function(instance->methods[OOPS_ABSTRACT_TOSTRING]);
+    if (janet_checktype(instance->type->methods[OOPS_ABSTRACT_TOSTRING], JANET_FUNCTION)) {
+        JanetFunction *method = janet_unwrap_function(instance->type->methods[OOPS_ABSTRACT_TOSTRING]);
         Janet ret = janet_call(method, 0, NULL);
         janet_buffer_push_string(buf, janet_unwrap_string(ret));
     } else {
