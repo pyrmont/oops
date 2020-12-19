@@ -95,7 +95,6 @@ static void oops_instance_put(void *p, Janet key, Janet value) {
         janet_panicf("no field %j in type", key);
 
     instance->fields[pos] = value;
-    printf("Finished putting\n");
 }
 
 /* Stringifying */
@@ -122,9 +121,21 @@ static void oops_instance_tostring(void *p, JanetBuffer *buf) {
 /* Comparing */
 
 static int oops_instance_compare(void *lhs, void *rhs) {
-    (void)lhs;
-    (void)rhs;
-    return 0;
+    oops_instance_t *a = (oops_instance_t *)lhs;
+    oops_instance_t *b = (oops_instance_t *)rhs;
+
+    if (janet_checktype(a->type->methods[OOPS_ABSTRACT_COMPARE], JANET_FUNCTION)) {
+        JanetFunction *method = janet_unwrap_function(a->type->methods[OOPS_ABSTRACT_COMPARE]);
+        Janet tup[2] = {janet_wrap_abstract(a), janet_wrap_abstract(b)};
+        JanetTuple args = janet_tuple_n(tup, 2);
+        Janet out = oops_instance_invoke_method(method, 2, args);
+        if (!janet_checkint(out)) {
+            janet_panic("function must return an integer");
+        }
+        return janet_unwrap_integer(out);
+    } else {
+        return a == b;
+    }
 }
 
 /* Traversing */

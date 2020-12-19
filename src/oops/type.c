@@ -22,6 +22,10 @@ oops_type_t *oops_type(const char *name, const Janet *fields, JanetDictView meth
     if (janet_checktype(method, JANET_FUNCTION)) {
         type->methods[OOPS_ABSTRACT_TOSTRING] = method;
     }
+    method = janet_dictionary_get(methods.kvs, methods.cap, janet_ckeywordv("compare"));
+    if (janet_checktype(method, JANET_FUNCTION)) {
+        type->methods[OOPS_ABSTRACT_COMPARE] = method;
+    }
 
     return type;
 }

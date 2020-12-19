@@ -3,8 +3,12 @@
 
 #include <janet.h>
 
-#define OOPS_ABSTRACT_METHODS 9
-#define OOPS_ABSTRACT_TOSTRING 4
+#define OOPS_ABSTRACT_METHODS 5
+#define OOPS_ABSTRACT_GET 0
+#define OOPS_ABSTRACT_PUT 1
+#define OOPS_ABSTRACT_TOSTRING 2
+#define OOPS_ABSTRACT_COMPARE 3
+#define OOPS_ABSTRACT_NEXT 4
 
 /* Oops Type Type */
 
