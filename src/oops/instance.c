@@ -1,5 +1,19 @@
 #include "../oops.h"
 
+/* Utility Functions */
+
+static Janet oops_instance_invoke_method(JanetFunction *method, int32_t argc, JanetTuple argv) {
+    JanetFiber *fiber = janet_fiber(method, 64, argc, argv);
+    Janet out;
+    JanetSignal sig = janet_continue(fiber, janet_wrap_nil(), &out);
+    if (sig != JANET_SIGNAL_OK) {
+        /* This stacktrace could be improved */
+        janet_stacktrace(fiber, out);
+        janet_panic(NULL);
+    }
+    return out;
+}
+
 /* Deinitialising */
 
 static int oops_instance_gc(void *p, size_t size) {
@@ -91,14 +105,44 @@ static void oops_instance_tostring(void *p, JanetBuffer *buf) {
 
     if (janet_checktype(instance->type->methods[OOPS_ABSTRACT_TOSTRING], JANET_FUNCTION)) {
         JanetFunction *method = janet_unwrap_function(instance->type->methods[OOPS_ABSTRACT_TOSTRING]);
-        Janet ret = janet_call(method, 0, NULL);
-        janet_buffer_push_string(buf, janet_unwrap_string(ret));
+        Janet tup[1] = {janet_wrap_abstract(instance)};
+        JanetTuple args = janet_tuple_n(tup, 1);
+        Janet out = oops_instance_invoke_method(method, 1, args);
+        if (!janet_checktypes(out, JANET_TFLAG_BYTES)) {
+            janet_panic("function must return a string, symbol, buffer or keyword");
+        }
+        janet_buffer_push_string(buf, janet_unwrap_string(out));
     } else {
         janet_buffer_push_cstring(buf, "<");
         janet_buffer_push_cstring(buf, instance->type->name);
         janet_buffer_push_cstring(buf, ">");
     }
 }
+
+/* Comparing */
+
+static int oops_instance_compare(void *lhs, void *rhs) {
+    (void)lhs;
+    (void)rhs;
+    return 0;
+}
+
+/* Traversing */
+
+static Janet oops_instance_next(void *p, Janet key) {
+    (void)p;
+    (void)key;
+    return janet_wrap_nil();
+}
+
+/* Calling */
+
+/* static Janet oops_instance_call(void *p, int32_t argc, Janet *argv) { */
+/*     (void)p; */
+/*     (void)argc; */
+/*     (void)argv; */
+/*     return janet_wrap_nil(); */
+/* } */
 
 /* Registration Function */
 
@@ -115,7 +159,10 @@ void oops_instance_register_type(const char *type_name) {
         NULL, /* marshalling */
         NULL, /* unmarshalling */
         oops_instance_tostring,
-        JANET_ATEND_TOSTRING
+        oops_instance_compare,
+        NULL, /* hashing */
+        oops_instance_next,
+        JANET_ATEND_NEXT
     };
 
     janet_register_abstract_type(at);

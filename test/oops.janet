@@ -3,7 +3,9 @@
 (def T (oops/emit-type
          "shopping-list"
          [:items]
-         {:tostring (fn [] "hello world")}))
+         {:tostring (fn [self]
+                      (string "My shopping list is:"
+                              (reduce |(string $0 "\n[ ] " $1) "" (self :items))))}))
 
 (print (type T))
 
@@ -17,6 +19,8 @@
 (put val :items ["apples" "pears"])
 
 (pp (val :items))
+
+(print val)
 
 (def P (oops/emit-protocol "append"
          [{:append {:doc "Appends x to coll"
